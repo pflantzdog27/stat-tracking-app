@@ -1,0 +1,402 @@
+/* Game Summary Page Responsive Styles */
+
+/* Line clamping for text truncation */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* Scrollbar hiding for horizontal navigation */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Extra small breakpoint for mobile */
+@media (min-width: 475px) {
+  .xs\:inline {
+    display: inline;
+  }
+  
+  .xs\:block {
+    display: block;
+  }
+  
+  .xs\:flex {
+    display: flex;
+  }
+  
+  .xs\:grid {
+    display: grid;
+  }
+  
+  .xs\:hidden {
+    display: none;
+  }
+}
+
+/* Game header responsive adjustments */
+@media (max-width: 640px) {
+  .game-header-score {
+    font-size: 2rem;
+    line-height: 1.2;
+  }
+  
+  .game-header-team-logo {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .game-header-score {
+    font-size: 3rem;
+    line-height: 1;
+  }
+  
+  .game-header-team-logo {
+    width: 4rem;
+    height: 4rem;
+  }
+}
+
+/* Box score table responsiveness */
+.box-score-table {
+  min-width: 600px;
+}
+
+@media (max-width: 768px) {
+  .box-score-table {
+    font-size: 0.875rem;
+  }
+  
+  .box-score-table th,
+  .box-score-table td {
+    padding: 0.5rem 0.25rem;
+  }
+}
+
+/* Player stats table responsive layout */
+.player-stats-table {
+  min-width: 800px;
+}
+
+@media (max-width: 640px) {
+  .player-stats-table {
+    min-width: 700px;
+    font-size: 0.8125rem;
+  }
+  
+  .player-stats-table th,
+  .player-stats-table td {
+    padding: 0.5rem 0.375rem;
+  }
+  
+  /* Hide less important columns on mobile */
+  .player-stats-table .mobile-hide {
+    display: none;
+  }
+}
+
+/* Timeline responsive design */
+.timeline-container {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .timeline-event {
+    padding: 0.75rem;
+  }
+  
+  .timeline-event-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+/* Highlights grid responsive */
+.highlights-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .highlights-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .highlights-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .highlights-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Highlight card aspect ratio */
+.highlight-thumbnail {
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+/* Video modal responsiveness */
+.video-modal {
+  width: 95vw;
+  max-width: 1200px;
+  max-height: 90vh;
+}
+
+@media (max-width: 640px) {
+  .video-modal {
+    width: 98vw;
+  }
+}
+
+/* Share menu responsive positioning */
+.share-menu {
+  width: 20rem;
+  max-width: 90vw;
+}
+
+@media (max-width: 640px) {
+  .share-menu {
+    position: fixed !important;
+    top: auto !important;
+    left: 1rem !important;
+    right: 1rem !important;
+    bottom: 1rem !important;
+    width: auto;
+    border-radius: 1rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+}
+
+/* Loading states */
+.loading-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Skeleton loading for game data */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Performance optimizations */
+.game-summary-container {
+  contain: layout style paint;
+}
+
+.game-nav-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-break-before {
+    page-break-before: always;
+  }
+  
+  .print-break-after {
+    page-break-after: always;
+  }
+  
+  .game-summary-container {
+    font-size: 12px !important;
+  }
+  
+  .box-score-table,
+  .player-stats-table {
+    font-size: 10px !important;
+  }
+  
+  .highlights-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem !important;
+  }
+}
+
+/* Accessibility improvements */
+.focus-visible\:ring-2:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .game-summary-container {
+    border-width: 2px;
+  }
+  
+  .box-score-table th,
+  .box-score-table td,
+  .player-stats-table th,
+  .player-stats-table td {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .loading-pulse,
+  .skeleton {
+    animation: none;
+  }
+  
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Dark mode support (if implemented) */
+@media (prefers-color-scheme: dark) {
+  .game-summary-dark {
+    background-color: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .game-summary-dark .bg-white {
+    background-color: #374151;
+  }
+  
+  .game-summary-dark .text-gray-900 {
+    color: #f9fafb;
+  }
+  
+  .game-summary-dark .text-gray-600 {
+    color: #d1d5db;
+  }
+  
+  .game-summary-dark .border-gray-200 {
+    border-color: #4b5563;
+  }
+}
+
+/* Touch-friendly interactions */
+@media (hover: none) and (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .game-nav-button {
+    padding: 0.75rem 1rem;
+  }
+  
+  .share-menu button {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Landscape phone optimizations */
+@media screen and (max-height: 600px) and (orientation: landscape) {
+  .game-header-container {
+    padding: 1rem 0;
+  }
+  
+  .game-nav-container {
+    padding: 0.5rem 0;
+  }
+  
+  .video-modal {
+    max-height: 85vh;
+  }
+}
+
+/* Large screen optimizations */
+@media (min-width: 1536px) {
+  .game-summary-container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .highlights-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* Stats visualization enhancements */
+.stat-bar {
+  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
+  height: 4px;
+  border-radius: 2px;
+}
+
+.stat-comparison {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 2rem;
+}
+
+.stat-comparison::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1px;
+  height: 1rem;
+  background-color: #d1d5db;
+}
+
+/* Smooth scrolling for timeline */
+.timeline-scroll {
+  scroll-behavior: smooth;
+}
