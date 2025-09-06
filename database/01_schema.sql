@@ -59,6 +59,7 @@ CREATE TABLE games (
     team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
     opponent VARCHAR(100) NOT NULL,
     game_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_home BOOLEAN NOT NULL DEFAULT true,
     location VARCHAR(200),
     game_type VARCHAR(20) NOT NULL DEFAULT 'regular' CHECK (game_type IN ('regular', 'playoff', 'tournament', 'scrimmage')),
     status VARCHAR(20) NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed', 'cancelled')),

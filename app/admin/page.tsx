@@ -35,7 +35,13 @@ export default function AdminDashboard() {
                     </h3>
                     <p className="text-gray-600">{teamMember.teams.season}</p>
                     <p className="text-gray-600">{teamMember.teams.division}</p>
-                    <div className="mt-4 flex space-x-2">
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Link
+                        href="/admin/teams"
+                        className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full hover:bg-purple-200 transition-colors"
+                      >
+                        Team Settings
+                      </Link>
                       <Link
                         href="/admin/games"
                         className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full hover:bg-blue-200 transition-colors"
@@ -64,6 +70,23 @@ export default function AdminDashboard() {
             <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               
+              <Link
+                href="/admin/teams"
+                className="bg-purple-100 rounded-lg p-6 hover:bg-purple-200 transition-colors group"
+              >
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <svg className="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-lg font-medium text-purple-900">Manage Teams</h3>
+                    <p className="text-purple-700">Create and edit teams</p>
+                  </div>
+                </div>
+              </Link>
+
               <Link
                 href="/admin/games"
                 className="bg-blue-100 rounded-lg p-6 hover:bg-blue-200 transition-colors group"

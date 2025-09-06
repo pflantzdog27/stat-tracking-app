@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import PenaltyModal from '@/components/live/PenaltyModal'
@@ -16,14 +17,19 @@ interface Player {
 
 interface Game {
   id: string
-  home_team: string
-  away_team: string
-  home_score: number
-  away_score: number
-  period: number
-  time_remaining: string
-  status: string
-  date: string
+  team_id: string
+  opponent: string
+  game_date: string
+  is_home: boolean
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
+  period?: number
+  time_remaining?: string
+  final_score_us?: number
+  final_score_them?: number
+  teams?: {
+    name: string
+    season: string
+  }
 }
 
 interface StatEvent {
@@ -36,112 +42,101 @@ interface StatEvent {
   penalty_type?: string
   penalty_minutes?: number
   description?: string
+  player_id?: string
 }
 
 export default function LiveStatsPage() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const gameId = searchParams.get('gameId')
+
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
-  const [game, setGame] = useState<Game>({
-    id: '1',
-    home_team: 'Thunder Bay Lightning',
-    away_team: 'Sudbury Wolves',
-    home_score: 2,
-    away_score: 1,
-    period: 2,
-    time_remaining: '14:32',
-    status: 'live',
-    date: '2023-11-18'
-  })
+  const [game, setGame] = useState<Game | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
   const [events, setEvents] = useState<StatEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [penaltyModalOpen, setPenaltyModalOpen] = useState(false)
   const [penaltyPlayer, setPenaltyPlayer] = useState<Player | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [completing, setCompleting] = useState(false)
 
   useEffect(() => {
-    // Simulate loading data
-    setTimeout(() => {
-      setPlayers([
-        {
-          id: '1',
-          name: 'Connor McDavid Jr',
-          jersey_number: 97,
-          position: 'C',
-          first_name: 'Connor',
-          last_name: 'McDavid Jr'
-        },
-        {
-          id: '2',
-          name: 'Jake Thompson',
-          jersey_number: 19,
-          position: 'LW',
-          first_name: 'Jake',
-          last_name: 'Thompson'
-        },
-        {
-          id: '3',
-          name: 'Ryan Mitchell',
-          jersey_number: 88,
-          position: 'RW',
-          first_name: 'Ryan',
-          last_name: 'Mitchell'
-        },
-        {
-          id: '4',
-          name: 'Erik Karlsson Jr',
-          jersey_number: 65,
-          position: 'D',
-          first_name: 'Erik',
-          last_name: 'Karlsson Jr'
-        },
-        {
-          id: '5',
-          name: 'Sam Garcia',
-          jersey_number: 4,
-          position: 'D',
-          first_name: 'Sam',
-          last_name: 'Garcia'
-        },
-        {
-          id: '6',
-          name: 'Carter Price Jr',
-          jersey_number: 31,
-          position: 'G',
-          first_name: 'Carter',
-          last_name: 'Price Jr'
-        }
-      ])
+    if (user && gameId) {
+      loadGameData()
+    } else if (user) {
+      // No gameId provided, redirect to games page
+      router.push('/games?error=no-game-selected')
+    }
+  }, [user, gameId])
 
-      setEvents([
-        {
-          id: '1',
-          player_name: 'Connor McDavid Jr',
-          player_number: 97,
-          event_type: 'goal',
-          time: '12:45',
-          period: 1
-        },
-        {
-          id: '2',
-          player_name: 'Jake Thompson',
-          player_number: 19,
-          event_type: 'assist',
-          time: '12:45',
-          period: 1
-        },
-        {
-          id: '3',
-          player_name: 'Ryan Mitchell',
-          player_number: 88,
-          event_type: 'goal',
-          time: '08:22',
-          period: 2
-        }
-      ])
+  // Navigation guard
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+      }
+    }
 
+    if (hasUnsavedChanges) {
+      window.addEventListener('beforeunload', handleBeforeUnload)
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [hasUnsavedChanges])
+
+  const loadGameData = async () => {
+    try {
+      setLoading(true)
+      
+      // Load game details
+      const gameResponse = await fetch(`/api/games/${gameId}`)
+      if (!gameResponse.ok) {
+        throw new Error('Failed to load game')
+      }
+      const { game: gameData } = await gameResponse.json()
+      
+      // Check if game is in progress
+      if (gameData.status !== 'in_progress') {
+        router.push(`/games/${gameId}?error=game-not-active`)
+        return
+      }
+      
+      setGame(gameData)
+
+      // Load team players from database
+      const playersResponse = await fetch(`/api/players?teamId=${gameData.team_id}`)
+      if (!playersResponse.ok) {
+        throw new Error('Failed to load players')
+      }
+      const { players: teamPlayers } = await playersResponse.json()
+      
+      // Transform player data to match the expected interface
+      const transformedPlayers = teamPlayers.map((player: any) => ({
+        id: player.id,
+        name: `${player.first_name} ${player.last_name}`,
+        jersey_number: player.jersey_number,
+        position: player.position,
+        first_name: player.first_name,
+        last_name: player.last_name
+      }))
+      
+      setPlayers(transformedPlayers)
+
+      // Load existing events (mock for now)
+      setEvents([])
+      
+    } catch (error) {
+      console.error('Error loading game data:', error)
+      router.push('/games?error=load-failed')
+    } finally {
       setLoading(false)
-    }, 500)
-  }, [])
+    }
+  }
 
   const getPositionColor = (position: string) => {
     switch (position) {
@@ -159,7 +154,7 @@ export default function LiveStatsPage() {
   }
 
   const handleStatEvent = (eventType: string) => {
-    if (!selectedPlayer) return
+    if (!selectedPlayer || !game) return
 
     // Handle penalty events differently - open modal
     if (eventType === 'penalty') {
@@ -173,18 +168,20 @@ export default function LiveStatsPage() {
       player_name: `${selectedPlayer.first_name} ${selectedPlayer.last_name}`,
       player_number: selectedPlayer.jersey_number,
       event_type: eventType,
-      time: game.time_remaining,
-      period: game.period
+      time: game.time_remaining || '20:00',
+      period: game.period || 1,
+      player_id: selectedPlayer.id
     }
 
     setEvents(prev => [newEvent, ...prev])
+    setHasUnsavedChanges(true)
 
     // Update score for goals
     if (eventType === 'goal') {
-      setGame(prev => ({
+      setGame(prev => prev ? {
         ...prev,
-        home_score: prev.home_score + 1
-      }))
+        final_score_us: (prev.final_score_us || 0) + 1
+      } : prev)
     }
 
     // Clear selection for quick re-entry
@@ -197,21 +194,23 @@ export default function LiveStatsPage() {
   }
 
   const handlePenaltySubmit = (penaltyType: string, minutes: number, description: string) => {
-    if (!penaltyPlayer) return
+    if (!penaltyPlayer || !game) return
 
     const newEvent: StatEvent = {
       id: `event_${Date.now()}`,
       player_name: `${penaltyPlayer.first_name} ${penaltyPlayer.last_name}`,
       player_number: penaltyPlayer.jersey_number,
       event_type: 'penalty',
-      time: game.time_remaining,
-      period: game.period,
+      time: game.time_remaining || '20:00',
+      period: game.period || 1,
       penalty_type: penaltyType,
       penalty_minutes: minutes,
-      description: description
+      description: description,
+      player_id: penaltyPlayer.id
     }
 
     setEvents(prev => [newEvent, ...prev])
+    setHasUnsavedChanges(true)
 
     // Clear penalty player selection
     setPenaltyPlayer(null)
@@ -221,12 +220,115 @@ export default function LiveStatsPage() {
     alert(`${penaltyType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} penalty (${minutes} min) recorded for #${penaltyPlayer.jersey_number} ${penaltyPlayer.first_name} ${penaltyPlayer.last_name}`)
   }
 
-  const updateScore = (homeScore: number, awayScore: number) => {
-    setGame(prev => ({
+  const updateScore = (usScore: number, themScore: number) => {
+    setGame(prev => prev ? ({
       ...prev,
-      home_score: Math.max(0, homeScore),
-      away_score: Math.max(0, awayScore)
-    }))
+      final_score_us: Math.max(0, usScore),
+      final_score_them: Math.max(0, themScore)
+    }) : prev)
+    setHasUnsavedChanges(true)
+  }
+
+  const handleSaveEvents = async () => {
+    if (!game || events.length === 0) {
+      alert('No events to save')
+      return
+    }
+
+    try {
+      setSaving(true)
+      
+      // Prepare events for API
+      const eventsToSave = events.map(event => ({
+        player_id: event.player_id,
+        event_type: event.event_type,
+        period: event.period,
+        time: event.time,
+        penalty_type: event.penalty_type,
+        penalty_minutes: event.penalty_minutes,
+        description: event.description
+      }))
+
+      const response = await fetch(`/api/games/${game.id}/events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ events: eventsToSave })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save events')
+      }
+
+      // Also update the game with current scores
+      const updateResponse = await fetch(`/api/games/${game.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'update',
+          final_score_us: game.final_score_us,
+          final_score_them: game.final_score_them
+        })
+      })
+
+      if (!updateResponse.ok) {
+        throw new Error('Failed to update scores')
+      }
+
+      setHasUnsavedChanges(false)
+      alert('Events and scores saved successfully!')
+    } catch (error) {
+      console.error('Error saving events:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save events')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCompleteGame = async () => {
+    if (!game) return
+
+    const confirmed = confirm(`Complete game with final score ${game.final_score_us} - ${game.final_score_them}?`)
+    if (!confirmed) return
+
+    try {
+      setCompleting(true)
+
+      // Save any unsaved events first
+      if (hasUnsavedChanges && events.length > 0) {
+        await handleSaveEvents()
+      }
+
+      // Complete the game
+      const response = await fetch(`/api/games/${game.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'finish',
+          final_score_us: game.final_score_us,
+          final_score_them: game.final_score_them
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to complete game')
+      }
+
+      alert('Game completed successfully!')
+      router.push('/games')
+    } catch (error) {
+      console.error('Error completing game:', error)
+      alert(error instanceof Error ? error.message : 'Failed to complete game')
+    } finally {
+      setCompleting(false)
+    }
   }
 
   if (loading) {
@@ -263,7 +365,13 @@ export default function LiveStatsPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Live Stats Entry</h1>
-              <p className="text-gray-600 mt-1">Real-time game statistics tracking</p>
+              {game ? (
+                <p className="text-gray-600 mt-1">
+                  {game.teams?.name || 'Your Team'} vs {game.opponent} - {new Date(game.game_date).toLocaleDateString()}
+                </p>
+              ) : (
+                <p className="text-gray-600 mt-1">Real-time game statistics tracking</p>
+              )}
             </div>
             <div className="flex space-x-3">
               <Link
@@ -285,54 +393,100 @@ export default function LiveStatsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Game Scoreboard */}
-        <div className="bg-white rounded-lg shadow mb-6 p-6">
-          <div className="text-center mb-6">
-            <div className="text-sm text-gray-500 mb-2">LIVE GAME - Period {game.period} - {game.time_remaining}</div>
-            <div className="flex items-center justify-center space-x-8">
-              {/* Away Team */}
-              <div className="text-center">
-                <div className="text-lg font-medium text-gray-900">{game.away_team}</div>
-                <div className="text-4xl font-bold text-gray-900">{game.away_score}</div>
-                <div className="flex space-x-1 mt-2">
-                  <button
-                    onClick={() => updateScore(game.home_score, game.away_score + 1)}
-                    className="bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded text-sm"
-                  >
-                    +1
-                  </button>
-                  <button
-                    onClick={() => updateScore(game.home_score, game.away_score - 1)}
-                    className="bg-red-100 hover:bg-red-200 text-red-800 px-2 py-1 rounded text-sm"
-                  >
-                    -1
-                  </button>
-                </div>
+        {game && (
+          <div className="bg-white rounded-lg shadow mb-6 p-6">
+            <div className="text-center mb-6">
+              <div className="text-sm text-gray-500 mb-2">
+                LIVE GAME - Period {game.period || 1} - {game.time_remaining || '20:00'}
               </div>
+              <div className="flex items-center justify-center space-x-8">
+                {/* Opponent Team */}
+                <div className="text-center">
+                  <div className="text-lg font-medium text-gray-900">{game.opponent}</div>
+                  <div className="text-4xl font-bold text-gray-900">{game.final_score_them || 0}</div>
+                  <div className="flex space-x-1 mt-2">
+                    <button
+                      onClick={() => updateScore(game.final_score_us || 0, (game.final_score_them || 0) + 1)}
+                      className="bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded text-sm"
+                    >
+                      +1
+                    </button>
+                    <button
+                      onClick={() => updateScore(game.final_score_us || 0, (game.final_score_them || 0) - 1)}
+                      className="bg-red-100 hover:bg-red-200 text-red-800 px-2 py-1 rounded text-sm"
+                    >
+                      -1
+                    </button>
+                  </div>
+                </div>
 
-              <div className="text-2xl font-bold text-gray-400">-</div>
+                <div className="text-2xl font-bold text-gray-400">-</div>
 
-              {/* Home Team */}
-              <div className="text-center">
-                <div className="text-lg font-medium text-gray-900">{game.home_team}</div>
-                <div className="text-4xl font-bold text-blue-600">{game.home_score}</div>
-                <div className="flex space-x-1 mt-2">
-                  <button
-                    onClick={() => updateScore(game.home_score + 1, game.away_score)}
-                    className="bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded text-sm"
-                  >
-                    +1
-                  </button>
-                  <button
-                    onClick={() => updateScore(game.home_score - 1, game.away_score)}
-                    className="bg-red-100 hover:bg-red-200 text-red-800 px-2 py-1 rounded text-sm"
-                  >
-                    -1
-                  </button>
+                {/* Your Team */}
+                <div className="text-center">
+                  <div className="text-lg font-medium text-gray-900">{game.teams?.name || 'Your Team'}</div>
+                  <div className="text-4xl font-bold text-blue-600">{game.final_score_us || 0}</div>
+                  <div className="flex space-x-1 mt-2">
+                    <button
+                      onClick={() => updateScore((game.final_score_us || 0) + 1, game.final_score_them || 0)}
+                      className="bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded text-sm"
+                    >
+                      +1
+                    </button>
+                    <button
+                      onClick={() => updateScore((game.final_score_us || 0) - 1, game.final_score_them || 0)}
+                      className="bg-red-100 hover:bg-red-200 text-red-800 px-2 py-1 rounded text-sm"
+                    >
+                      -1
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
+            
+            {/* Game Controls */}
+            <div className="flex justify-center space-x-4 border-t pt-4">
+              <Link
+                href={`/games/${game.id}`}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md font-medium"
+              >
+                Back to Game
+              </Link>
+              
+              {events.length > 0 && (
+                <button
+                  onClick={handleSaveEvents}
+                  disabled={saving || !hasUnsavedChanges}
+                  className={`px-4 py-2 rounded-md font-medium ${
+                    saving || !hasUnsavedChanges
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  {saving ? 'Saving...' : 'Save Events'}
+                </button>
+              )}
+
+              <button
+                onClick={handleCompleteGame}
+                disabled={completing}
+                className={`px-4 py-2 rounded-md font-medium ${
+                  completing
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                {completing ? 'Completing...' : 'Complete Game'}
+              </button>
+
+              {hasUnsavedChanges && (
+                <div className="flex items-center text-amber-600">
+                  <span className="text-sm font-medium">⚠️ Unsaved changes</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Player Selection */}

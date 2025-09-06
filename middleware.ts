@@ -33,29 +33,19 @@ export async function middleware(req: NextRequest) {
   }
 
   if (session && requiresAuth) {
-    // Get user role from database
-    const { data: user } = await supabase
-      .from('users')
-      .select('role')
-      .eq('email', session.user.email)
-      .single()
-
-    if (!user) {
-      // User not found in database, redirect to login
-      await supabase.auth.signOut()
-      return NextResponse.redirect(new URL('/auth/login', req.url))
-    }
+    // Get user role from auth metadata
+    const userRole = session.user.user_metadata?.role || 'viewer'
 
     // Check admin routes
     if (adminRoutes.some(route => pathname.startsWith(route))) {
-      if (user.role !== 'admin') {
+      if (userRole !== 'admin') {
         return NextResponse.redirect(new URL('/unauthorized', req.url))
       }
     }
 
     // Check coach routes (admin and coach allowed)
     if (coachRoutes.some(route => pathname.startsWith(route))) {
-      if (!['admin', 'coach'].includes(user.role)) {
+      if (!['admin', 'coach'].includes(userRole)) {
         return NextResponse.redirect(new URL('/unauthorized', req.url))
       }
     }

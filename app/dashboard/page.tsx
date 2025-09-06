@@ -3,6 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import Link from 'next/link'
+import Layout from '@/components/layout/Layout'
 
 export default function DashboardPage() {
   const { user, userTeams, logout } = useAuth()
@@ -15,28 +16,7 @@ export default function DashboardPage() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold">Hockey Stats</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">
-                {user.first_name} {user.last_name} ({user.role})
-              </span>
-              <button
-                onClick={handleLogout}
-                className="text-sm text-blue-600 hover:text-blue-500"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <Layout>
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -141,6 +121,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   )
 }
